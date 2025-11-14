@@ -1,0 +1,335 @@
+/* =========================================
+   ASSINDOCS - CSS COMPLETO E MODERNO
+   ========================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+
+:root {
+  --gradiente: linear-gradient(135deg, #3b82f6, #7c3aed);
+  --cor-texto: #fff;
+  --sombra: 0 4px 30px rgba(0, 0, 0, 0.2);
+  --header-bg: #ffffff;
+  --header-text: #333;
+  --header-text-hover: #0d6efd;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+}
+
+body {
+  background: var(--gradiente);
+  color: var(--cor-texto);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  /* Removido overflow-x: hidden para evitar corte de elementos */
+}
+
+/* =========================================
+   HEADER DESLOGADO
+   ========================================= */
+header.main-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 2.5rem;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+header.main-header img {
+  height: 42px;
+}
+
+header.main-header nav a {
+  text-decoration: none;
+  color: white;
+  margin-left: 1rem;
+  padding: 8px 20px;
+  border-radius: 25px;
+  font-weight: 500;
+  transition: .3s ease;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+header.main-header nav a:hover {
+  background: indigo;
+  color: #6d28d9;
+}
+
+/* =========================================
+   HEADER LOGADO (Bootstrap nav)
+   ========================================= */
+.main-header.shadow-sm {
+  background: white !important;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.navbar-nav .nav-link {
+  color: #333 !important;
+  font-weight: 600;
+  transition: .2s;
+}
+
+.navbar-nav .nav-link:hover {
+  color: #0d6efd !important;
+}
+
+.btn-danger {
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+/* =========================================
+   MENU MOBILE
+   ========================================= */
+.navbar-toggler {
+  border: none;
+}
+.navbar-toggler:focus {
+  box-shadow: none;
+}
+
+@media (max-width: 768px) {
+  .navbar-collapse {
+    background: white;
+    padding: 1rem;
+    border-radius: 10px;
+    box-shadow: var(--sombra);
+  }
+
+  header.main-header {
+    padding: 1rem 1.5rem;
+  }
+
+  header.main-header nav a {
+    display: block;
+    margin: 10px 0;
+    text-align: center;
+  }
+}
+
+/* =========================================
+   HERO (PÁGINA INICIAL)
+   ========================================= */
+.hero {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 4rem 2rem;
+}
+
+.hero h1 {
+  font-size: 2.8rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  text-shadow: 0 3px 10px rgba(0,0,0,0.3);
+}
+
+.hero p {
+  font-size: 1.1rem;
+  opacity: 0.9;
+  margin-bottom: 2rem;
+}
+
+.hero .btns a {
+  text-decoration: none;
+  padding: 0.8rem 2rem;
+  border-radius: 30px;
+  font-weight: 600;
+  margin: 0 0.5rem;
+  transition: .3s;
+}
+
+.hero .btns .primary {
+  background: white;
+  color: #3b82f6;
+}
+
+.hero .btns .secondary {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+/* =========================================
+   LOGIN & CADASTRO
+   ========================================= */
+.login-container,
+.cadastro-container {
+  min-height: 80vh;
+  display: flex !important; /* Garantido para aparecer */
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #5b4bff, #9b3ef9);
+  padding: 2rem; /* Espaçamento para evitar corte */
+}
+
+.login-card,
+.cadastro-card {
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(10px);
+  border-radius: 15px;
+  padding: 40px 55px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: var(--sombra);
+  color: white;
+  text-align: center;
+  display: block !important; /* Garantido para aparecer */
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+.form-group label {
+  font-weight: 500;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+input {
+  background: rgba(255,255,255,0.2) !important;
+  border: none !important;
+  color: white !important;
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 8px;
+}
+
+.btn-primary {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  width: 100%;
+  transition: .3s;
+}
+
+.btn-primary:hover {
+  background: #2563eb;
+}
+
+.erro-login {
+  color: #ff6b6b;
+  margin-bottom: 1rem;
+}
+
+.sucesso-msg {
+  color: #4caf50;
+  margin-bottom: 1rem;
+}
+
+.login-link {
+  margin-top: 1rem;
+}
+
+.login-link a {
+  color: #3b82f6;
+  text-decoration: none;
+}
+
+/* =========================================
+   FOOTER
+   ========================================= */
+footer {
+  text-align: center;
+  padding: 1rem;
+  background: rgba(0,0,0,0.1);
+  font-size: 0.9rem;
+  color: #eee;
+  margin-top: auto;
+}
+
+/* =========================================
+   RESPONSIVIDADE GLOBAL
+   ========================================= */
+@media (max-width: 768px) {
+  .hero h1 {
+    font-size: 2rem;
+  }
+
+  .login-card,
+  .cadastro-card {
+    padding: 35px 32px;
+  }
+}
+
+/* ===========================
+   HEADER DESLOGADO CORRIGIDO
+   =========================== */
+header.main-header {
+  background: linear-gradient(90deg, #4B83FF, #6A5DFF);
+  padding: 12px 0;
+  color: white;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo-area {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: white;
+  text-decoration: none;
+}
+
+.logo-area img {
+  height: 42px;
+}
+
+.logo-area span {
+  font-size: 1.4rem;
+  font-weight: bold;
+}
+
+.menu-deslogado {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.menu-deslogado .menu-link {
+  color: white;
+  text-decoration: none;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: 20px;
+  transition: 0.2s;
+}
+
+.menu-deslogado .menu-link:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.btn-cadastro {
+  background: white;
+  color: #2563eb !important;
+  padding: 8px 20px;
+  border-radius: 25px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: 0.2s;
+}
+
+.btn-cadastro:hover {
+  background: #e3e3e3;
+}

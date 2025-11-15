@@ -318,8 +318,7 @@ try {
                                             <small class="text-muted">
                                                 <?php 
                                                 // CORREÇÃO: Usar criado_em em vez de data_envio
-                                                $data = new DateTime($doc_item['criado_em']);
-                                                echo $data->format('d/m/Y H:i');
+                                               $data_criacao = new DateTime($documento['data_envio'] ?? $documento['criado_em']);
                                                 ?>
                                             </small>
                                         </td>

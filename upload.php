@@ -1,5 +1,5 @@
 <?php
-// upload.php - VERSÃO SIMPLIFICADA E CORRIGIDA
+// upload.php - VERSÃO CORRIGIDA
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
@@ -14,6 +14,13 @@ if (!isset($_SESSION['usuario_id'])) {
 require_once 'classes/Arquivo.php';
 require_once 'classes/Documento.php';
 require_once 'classes/Projeto.php';
+
+// DEBUG: Verificar e carregar AssinaturaExterna
+if (file_exists('classes/AssinaturaExterna.php')) {
+    require_once 'classes/AssinaturaExterna.php';
+} else {
+    error_log("AVISO: AssinaturaExterna.php não encontrado. Usando sistema antigo.");
+}
 
 include 'includes/header_logado.php';
 
@@ -36,28 +43,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (isset($_FILES['arquivo']) && $_FILES['arquivo']['error'] !== UPLOAD_ERR_NO_FILE) {
             $upload = Arquivo::uploadPDF($_FILES['arquivo']);
-            
+
             if ($upload['success']) {
                 $doc = new Documento();
-                
+
                 // CORREÇÃO: Passar o hash como parâmetro
                 $id = $doc->criarDocumento(
-                    $usuario_id, 
-                    $projeto_id, 
-                    $titulo, 
+                    $usuario_id,
+                    $projeto_id,
+                    $titulo,
                     $upload['path'],
                     $upload['hash'] // ← PARÂMETRO ADICIONADO
                 );
-                
+
                 if ($id) {
-                    // Adicionar signatários
+                    // Adicionar signatários - VERSÃO LIMPA
+                    $signatarios_adicionados = 0;
+
                     foreach ($signatarios as $email) {
                         $email_limpo = filter_var(trim($email), FILTER_SANITIZE_EMAIL);
-                        if (!empty($email_limpo)) {
-                            $doc->adicionarSignatario($id, '', $email_limpo);
+
+                        if (!empty($email_limpo) && filter_var($email_limpo, FILTER_VALIDATE_EMAIL)) {
+
+                            if (class_exists('AssinaturaExterna')) {
+                                $assinatura_externa = new AssinaturaExterna();
+                                $resultado = $assinatura_externa->adicionarSignatario(
+                                    $id,
+                                    'Signatário',
+                                    $email_limpo,
+                                    ''
+                                );
+
+                                if ($resultado['success']) {
+                                    $signatarios_adicionados++;
+                                    // Opcional: enviar email aqui
+                                } else {
+                                    // Fallback para sistema antigo
+                                    $doc->adicionarSignatario($id, 'Signatário', $email_limpo);
+                                    $signatarios_adicionados++;
+                                }
+                            } else {
+                                // Sistema antigo
+                                $doc->adicionarSignatario($id, 'Signatário', $email_limpo);
+                                $signatarios_adicionados++;
+                            }
                         }
                     }
+
                     $msg = 'Documento enviado com sucesso! Hash: ' . substr($upload['hash'], 0, 16) . '...';
+                    $msg .= ' Signatários: ' . $signatarios_adicionados;
                     $tipo_msg = 'success';
                 } else {
                     $msg = 'Erro ao salvar documento no banco de dados.';
@@ -80,19 +114,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <div class="container mt-5">
     <h2>Enviar Novo Documento</h2>
-    
+
     <?php if (!empty($msg)): ?>
         <div class="alert alert-<?php echo $tipo_msg; ?>">
             <?php echo htmlspecialchars($msg); ?>
         </div>
     <?php endif; ?>
-    
+
     <form method="POST" enctype="multipart/form-data">
         <div class="mb-3">
             <label for="titulo" class="form-label">Título do Documento</label>
             <input type="text" id="titulo" name="titulo" class="form-control" placeholder="Ex.: Contrato de Prestação de Serviços" required>
         </div>
-        
+
         <div class="mb-3">
             <label for="arquivo" class="form-label">Arquivo PDF (máx. 5MB)</label>
             <input type="file" id="arquivo" name="arquivo" accept=".pdf" class="form-control" required onchange="previewPDF(this)">
@@ -101,7 +135,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <iframe id="pdf-iframe" width="100%" height="400px" style="border: 1px solid #ddd; border-radius: 5px;"></iframe>
             </div>
         </div>
-        
+
         <div class="mb-3">
             <label for="projeto_id" class="form-label">Projeto (opcional)</label>
             <select id="projeto_id" name="projeto_id" class="form-control">
@@ -111,7 +145,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php endforeach; ?>
             </select>
         </div>
-        
+
         <div class="mb-3">
             <label class="form-label">Signatários (e-mails)</label>
             <div id="signatarios-container">
@@ -121,7 +155,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <i class="fas fa-plus"></i> Adicionar Signatário
             </button>
         </div>
-        
+
         <button type="submit" class="btn btn-primary">
             <i class="fas fa-upload"></i> Enviar Documento
         </button>
@@ -129,49 +163,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </form>
 </div>
 
-<script>
-function previewPDF(input) {
-    const preview = document.getElementById('pdf-preview');
-    const iframe = document.getElementById('pdf-iframe');
-    
-    if (input.files && input.files[0]) {
-        const file = input.files[0];
-        
-        // Validação de tamanho
-        if (file.size > 5 * 1024 * 1024) {
-            alert('Arquivo muito grande! O tamanho máximo é 5MB.');
-            input.value = '';
-            preview.style.display = 'none';
-            return;
-        }
-        
-        // Validação de tipo
-        if (file.type !== 'application/pdf') {
-            alert('Apenas arquivos PDF são permitidos!');
-            input.value = '';
-            preview.style.display = 'none';
-            return;
-        }
-        
-        // Mostrar preview
-        const url = URL.createObjectURL(file);
-        iframe.src = url;
-        preview.style.display = 'block';
-    } else {
-        preview.style.display = 'none';
-    }
-}
-
-function addSignatario() {
-    const container = document.getElementById('signatarios-container');
-    const newInput = document.createElement('input');
-    newInput.type = 'email';
-    newInput.name = 'signatarios[]';
-    newInput.className = 'form-control mb-2';
-    newInput.placeholder = 'E-mail adicional do signatário';
-    container.appendChild(newInput);
-}
-</script>
 
 <?php
 include 'includes/footer.php';

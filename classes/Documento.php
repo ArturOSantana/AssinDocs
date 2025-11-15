@@ -57,7 +57,19 @@ class Documento
             return false;
         }
     }
-
+    // Adicionar ao Documento.php
+    public function buscarParaCertificado($id)
+    {
+        try {
+            $sql = "SELECT * FROM documentos WHERE id = :id";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([":id" => (int)$id]);
+            return $stmt->fetch();
+        } catch (Exception $e) {
+            error_log("Erro ao buscar documento para certificado: " . $e->getMessage());
+            return false;
+        }
+    }
     public function listarPorUsuario($usuario_id)
     {
         try {

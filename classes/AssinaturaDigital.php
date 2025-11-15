@@ -116,8 +116,8 @@ class AssinaturaDigital
 
             // CORREÇÃO: Usar o nome correto da coluna 'assinatura'
             $sql = "INSERT INTO assinaturas_digitais 
-                    (documento_id, usuario_id, assinatura, ip_address, user_agent) 
-                    VALUES (:doc_id, :user_id, :assinatura, :ip, :ua)";
+        (documento_id, usuario_id, assinatura, ip_address, user_agent) 
+        VALUES (:doc_id, :user_id, :assinatura, :ip, :ua)";
 
             $stmt = $this->conn->prepare($sql);
             $result = $stmt->execute([

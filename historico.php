@@ -105,9 +105,7 @@ try {
                                         <td>
                                             <small class="text-muted">
                                                 <?php 
-                                                // USANDO criado_em em vez de data_envio
-                                                $data_criacao = new DateTime($documento['criado_em']);
-                                                echo $data_criacao->format('d/m/Y H:i');
+                                              $data_criacao = new DateTime($documento['data_envio'] ?? $documento['criado_em']);
                                                 ?>
                                             </small>
                                         </td>

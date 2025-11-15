@@ -27,7 +27,48 @@ $permissoes = [];
 if (empty($token)) {
     die("Token não fornecido");
 }
+// shared.php - ADICIONE ESTE CÓDIGO APÓS a parte de validação do token
 
+// Processar assinatura externa
+if ($dados_link && $dados_link['success'] && isset($_POST['assinar_documento_externo'])) {
+    try {
+        require_once 'classes/AssinaturaExterna.php';
+        require_once 'classes/GeradorAssinatura.php';
+
+        $assinatura_externa = new AssinaturaExterna();
+
+        $dados_assinante = [
+            'nome_completo' => htmlspecialchars(trim($_POST['nome_completo'])),
+            'cpf' => $_POST['cpf'],
+            'email' => filter_var(trim($_POST['email']), FILTER_SANITIZE_EMAIL),
+            'tipo_documento' => 'EXTERNO',
+            'numero_documento' => $_POST['cpf'], // Usar CPF como número do documento
+            'data_emissao' => date('Y-m-d')
+        ];
+
+        $resultado = $assinatura_externa->processarAssinatura(
+            $token,
+            $dados_assinante,
+            $_FILES['documento_identificacao']
+        );
+
+        if ($resultado['success']) {
+            $msg = "Documento assinado com sucesso! ";
+            $msg .= "<a href='{$resultado['certificado_url']}' target='_blank' class='btn btn-success btn-sm'>Ver Certificado</a>";
+            $tipo_msg = 'success';
+
+            // Atualizar dados
+            $documento = $dados_link['documento'];
+            $assinaturas = $assinatura_class->listarAssinaturasDocumento($documento['id']);
+        } else {
+            $msg = "Erro: " . $resultado['message'];
+            $tipo_msg = 'danger';
+        }
+    } catch (Exception $e) {
+        $msg = "Erro no sistema: " . $e->getMessage();
+        $tipo_msg = 'danger';
+    }
+}
 // Processar validação do link
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['validar_senha'])) {
     $senha = $_POST['senha'];
@@ -53,7 +94,7 @@ if ($dados_link && $dados_link['success']) {
         $msg = "Funcionalidade de assinatura externa em desenvolvimento";
         $tipo_msg = 'info';
     }
-    
+
     if (isset($_POST['download_documento'])) {
         if (in_array('download', array_map('strtolower', $permissoes)) || in_array('Baixar documento', $permissoes)) {
             if (file_exists($documento['arquivo_path'])) {
@@ -75,6 +116,7 @@ if ($dados_link && $dados_link['success']) {
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -88,29 +130,35 @@ if ($dados_link && $dados_link['success']) {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
         }
+
         .shared-container {
             background: white;
             border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
             margin: 20px 0;
         }
+
         .document-preview {
             border: 2px solid #e9ecef;
             border-radius: 10px;
             background: #f8f9fa;
         }
+
         .permission-badge {
             font-size: 0.8rem;
         }
+
         .security-status {
             border-left: 4px solid #28a745;
             padding-left: 15px;
         }
+
         .security-status.invalid {
             border-left-color: #dc3545;
         }
     </style>
 </head>
+
 <body>
     <div class="container py-5">
         <div class="row justify-content-center">
@@ -142,8 +190,8 @@ if ($dados_link && $dados_link['success']) {
                                 <p>Este link está protegido por senha. Digite a senha fornecida pelo remetente:</p>
                                 <form method="POST" class="row g-3 align-items-center">
                                     <div class="col-md-8">
-                                        <input type="password" name="senha" class="form-control" 
-                                               placeholder="Digite a senha" required>
+                                        <input type="password" name="senha" class="form-control"
+                                            placeholder="Digite a senha" required>
                                     </div>
                                     <div class="col-md-4">
                                         <button type="submit" name="validar_senha" class="btn btn-primary w-100">
@@ -194,27 +242,27 @@ if ($dados_link && $dados_link['success']) {
                                     <div class="col-12">
                                         <div class="d-flex flex-wrap gap-2">
                                             <!-- Visualização -->
-                                            <button type="button" class="btn btn-outline-primary" 
-                                                    onclick="document.getElementById('pdf-preview').scrollIntoView({behavior: 'smooth'})">
+                                            <button type="button" class="btn btn-outline-primary"
+                                                onclick="document.getElementById('pdf-preview').scrollIntoView({behavior: 'smooth'})">
                                                 <i class="fas fa-eye me-2"></i>Visualizar
                                             </button>
-                                            
+
                                             <!-- Download -->
                                             <?php if (in_array('Baixar documento', $permissoes) || $link_info['tipo'] === 'download' || $link_info['tipo'] === 'assinatura'): ?>
-                                            <form method="POST" class="d-inline">
-                                                <button type="submit" name="download_documento" 
+                                                <form method="POST" class="d-inline">
+                                                    <button type="submit" name="download_documento"
                                                         class="btn btn-outline-success">
-                                                    <i class="fas fa-download me-2"></i>Baixar
-                                                </button>
-                                            </form>
+                                                        <i class="fas fa-download me-2"></i>Baixar
+                                                    </button>
+                                                </form>
                                             <?php endif; ?>
-                                            
+
                                             <!-- Assinatura -->
                                             <?php if (in_array('Assinar documento', $permissoes) || $link_info['tipo'] === 'assinatura'): ?>
-                                            <button type="button" class="btn btn-outline-warning" 
+                                                <button type="button" class="btn btn-outline-warning"
                                                     data-bs-toggle="modal" data-bs-target="#modalAssinatura">
-                                                <i class="fas fa-signature me-2"></i>Assinar
-                                            </button>
+                                                    <i class="fas fa-signature me-2"></i>Assinar
+                                                </button>
                                             <?php endif; ?>
                                         </div>
                                     </div>
@@ -257,15 +305,13 @@ if ($dados_link && $dados_link['success']) {
                                     <div class="col-md-4 mb-3">
                                         <div class="border rounded p-3 h-100">
                                             <?php
-                                            $status_icon = $status_completo['status_geral'] === 'VALIDO' ? 'check' : 
-                                                          ($status_completo['status_geral'] === 'NAO_ASSINADO' ? 'clock' : 'exclamation');
-                                            $status_color = $status_completo['status_geral'] === 'VALIDO' ? 'success' : 
-                                                          ($status_completo['status_geral'] === 'NAO_ASSINADO' ? 'warning' : 'danger');
+                                            $status_icon = $status_completo['status_geral'] === 'VALIDO' ? 'check' : ($status_completo['status_geral'] === 'NAO_ASSINADO' ? 'clock' : 'exclamation');
+                                            $status_color = $status_completo['status_geral'] === 'VALIDO' ? 'success' : ($status_completo['status_geral'] === 'NAO_ASSINADO' ? 'warning' : 'danger');
                                             ?>
                                             <i class="fas fa-<?php echo $status_icon; ?>-circle fa-2x text-<?php echo $status_color; ?> mb-2"></i>
                                             <h6>Status Geral</h6>
                                             <small class="text-muted">
-                                                <?php 
+                                                <?php
                                                 $status_text = [
                                                     'VALIDO' => 'Válido',
                                                     'NAO_ASSINADO' => 'Não assinado',
@@ -290,10 +336,10 @@ if ($dados_link && $dados_link['success']) {
                             </div>
                             <div class="card-body p-0">
                                 <?php if (file_exists($documento['arquivo_path'])): ?>
-                                    <iframe src="<?php echo $documento['arquivo_path']; ?>" 
-                                            width="100%" 
-                                            height="600px"
-                                            style="border: none; border-radius: 0 0 0.375rem 0.375rem;">
+                                    <iframe src="<?php echo $documento['arquivo_path']; ?>"
+                                        width="100%"
+                                        height="600px"
+                                        style="border: none; border-radius: 0 0 0.375rem 0.375rem;">
                                     </iframe>
                                 <?php else: ?>
                                     <div class="text-center py-5 text-muted">
@@ -307,39 +353,39 @@ if ($dados_link && $dados_link['success']) {
 
                         <!-- Assinaturas Existentes -->
                         <?php if (!empty($assinaturas)): ?>
-                        <div class="card shadow-sm">
-                            <div class="card-header">
-                                <h6 class="mb-0">
-                                    <i class="fas fa-list me-2"></i>Assinaturas no Documento
-                                </h6>
+                            <div class="card shadow-sm">
+                                <div class="card-header">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-list me-2"></i>Assinaturas no Documento
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <?php foreach ($assinaturas as $assinatura): ?>
+                                        <div class="d-flex align-items-center mb-3 p-2 border rounded">
+                                            <div class="flex-shrink-0">
+                                                <i class="fas fa-user-circle fa-2x text-primary"></i>
+                                            </div>
+                                            <div class="flex-grow-1 ms-3">
+                                                <strong><?php echo htmlspecialchars($assinatura['usuario_nome']); ?></strong>
+                                                <br>
+                                                <small class="text-muted">
+                                                    <?php echo $assinatura['email']; ?> •
+                                                    <?php echo date('d/m/Y H:i', strtotime($assinatura['timestamp'])); ?>
+                                                </small>
+                                            </div>
+                                            <div class="flex-shrink-0">
+                                                <?php
+                                                $verificacao = $assinatura_class->verificarAssinatura($documento['id'], $assinatura['usuario_id']);
+                                                ?>
+                                                <span class="badge bg-<?php echo $verificacao['valida'] ? 'success' : 'danger'; ?>">
+                                                    <i class="fas fa-<?php echo $verificacao['valida'] ? 'check' : 'times'; ?> me-1"></i>
+                                                    <?php echo $verificacao['valida'] ? 'Válida' : 'Inválida'; ?>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
                             </div>
-                            <div class="card-body">
-                                <?php foreach ($assinaturas as $assinatura): ?>
-                                    <div class="d-flex align-items-center mb-3 p-2 border rounded">
-                                        <div class="flex-shrink-0">
-                                            <i class="fas fa-user-circle fa-2x text-primary"></i>
-                                        </div>
-                                        <div class="flex-grow-1 ms-3">
-                                            <strong><?php echo htmlspecialchars($assinatura['usuario_nome']); ?></strong>
-                                            <br>
-                                            <small class="text-muted">
-                                                <?php echo $assinatura['email']; ?> • 
-                                                <?php echo date('d/m/Y H:i', strtotime($assinatura['timestamp'])); ?>
-                                            </small>
-                                        </div>
-                                        <div class="flex-shrink-0">
-                                            <?php 
-                                            $verificacao = $assinatura_class->verificarAssinatura($documento['id'], $assinatura['usuario_id']);
-                                            ?>
-                                            <span class="badge bg-<?php echo $verificacao['valida'] ? 'success' : 'danger'; ?>">
-                                                <i class="fas fa-<?php echo $verificacao['valida'] ? 'check' : 'times'; ?> me-1"></i>
-                                                <?php echo $verificacao['valida'] ? 'Válida' : 'Inválida'; ?>
-                                            </span>
-                                        </div>
-                                    </div>
-                                <?php endforeach; ?>
-                            </div>
-                        </div>
                         <?php endif; ?>
                     <?php endif; ?>
 
@@ -351,7 +397,7 @@ if ($dados_link && $dados_link['success']) {
                             <br>
                             <?php if (isset($link_info)): ?>
                                 Link válido até: <?php echo date('d/m/Y H:i', strtotime($link_info['expira_em'])); ?>
-                                • Usos: <?php echo $link_info['usos']; ?><?php echo $link_info['max_usos'] ? '/'.$link_info['max_usos'] : ''; ?>
+                                • Usos: <?php echo $link_info['usos']; ?><?php echo $link_info['max_usos'] ? '/' . $link_info['max_usos'] : ''; ?>
                             <?php endif; ?>
                         </p>
                     </div>
@@ -360,38 +406,88 @@ if ($dados_link && $dados_link['success']) {
         </div>
     </div>
 
-    <!-- Modal para Assinatura Externa -->
     <div class="modal fade" id="modalAssinatura">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Assinar Documento</h5>
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title">
+                        <i class="fas fa-signature me-2"></i>Assinar Documento
+                    </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="alert alert-info">
                         <i class="fas fa-info-circle me-2"></i>
-                        <strong>Funcionalidade em desenvolvimento</strong><br>
-                        Em breve você poderá assinar este documento digitalmente mesmo sem ter uma conta no AssinDocs.
+                        <strong>Assinatura Digital Externa</strong><br>
+                        Você está prestes a assinar o documento <strong>"<?php echo htmlspecialchars($documento['titulo']); ?>"</strong>.
                     </div>
-                    <p>Para assinar este documento:</p>
-                    <ol>
-                        <li>Preencha seus dados pessoais</li>
-                        <li>Será gerada uma chave digital única para você</li>
-                        <li>Sua assinatura será vinculada ao hash do documento</li>
-                        <li>Receba um comprovante de assinatura</li>
-                    </ol>
+
+                    <form method="POST" id="formAssinaturaExterna">
+                        <input type="hidden" name="assinar_documento_externo" value="1">
+                        <input type="hidden" name="documento_id" value="<?php echo $documento['id']; ?>">
+                        <input type="hidden" name="token" value="<?php echo $token; ?>">
+
+                        <div class="mb-3">
+                            <label class="form-label requerido">Nome Completo</label>
+                            <input type="text" name="nome_completo" class="form-control" required
+                                placeholder="Digite seu nome completo">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label requerido">CPF</label>
+                            <input type="text" name="cpf" class="form-control cpf-mask" required
+                                placeholder="000.000.000-00">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label requerido">Email</label>
+                            <input type="email" name="email" class="form-control" required
+                                placeholder="seu@email.com">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Documento de Identificação (opcional)</label>
+                            <input type="file" name="documento_identificacao" class="form-control"
+                                accept=".jpg,.jpeg,.png,.pdf">
+                            <small class="text-muted">RG, CNH ou Passaporte (máx. 2MB)</small>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="termos_externo" required>
+                            <label class="form-check-label" for="termos_externo">
+                                Declaro que as informações são verdadeiras e concordo com os termos deste documento.
+                                Reconheço a validade jurídica desta assinatura digital.
+                            </label>
+                        </div>
+                    </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                    <button type="button" class="btn btn-primary" disabled>
-                        <i class="fas fa-signature me-2"></i>Em Breve
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" form="formAssinaturaExterna" class="btn btn-success">
+                        <i class="fas fa-fingerprint me-2"></i>Assinar Digitalmente
                     </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Máscara para CPF
+        document.addEventListener('DOMContentLoaded', function() {
+            const cpfInput = document.querySelector('.cpf-mask');
+            if (cpfInput) {
+                cpfInput.addEventListener('input', function(e) {
+                    let value = e.target.value.replace(/\D/g, '');
+                    if (value.length <= 11) {
+                        value = value.replace(/(\d{3})(\d)/, '$1.$2')
+                            .replace(/(\d{3})(\d)/, '$1.$2')
+                            .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+                    }
+                    e.target.value = value;
+                });
+            }
+        });
+    </script>
 </body>
+
 </html>

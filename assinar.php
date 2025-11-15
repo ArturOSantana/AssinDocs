@@ -13,6 +13,11 @@ require_once 'classes/Documento.php';
 require_once 'classes/AssinaturaDigital.php';
 require_once 'classes/Arquivo.php';
 
+// Verificar se o gerador de assinatura existe
+if (file_exists('classes/GeradorAssinatura.php')) {
+    require_once 'classes/GeradorAssinatura.php';
+}
+
 include 'includes/header_logado.php';
 
 $documento_id = $_GET['id'] ?? null;
@@ -20,6 +25,7 @@ $usuario_id = $_SESSION['usuario_id'];
 $usuario_nome = $_SESSION['usuario_nome'] ?? 'Usuário';
 $msg = '';
 $tipo_msg = '';
+$certificado_url = '';
 
 if (!$documento_id) {
     die("ID do documento não especificado");
@@ -69,7 +75,56 @@ try {
                 $resultado = $assinatura_class->assinarDocumento($documento_id, $usuario_id);
                 
                 if ($resultado['success']) {
-                    $msg = "SUCESSO! " . $resultado['message'] . " Assinatura: " . $resultado['assinatura_curta'];
+                    // TENTAR GERAR CERTIFICADO VISUAL
+                    if (class_exists('GeradorAssinatura')) {
+                        try {
+                            $gerador_assinatura = new GeradorAssinatura();
+                            $assinaturas_atualizadas = $assinatura_class->listarAssinaturasDocumento($documento_id);
+                            
+                            // Encontrar a assinatura atual do usuário
+                            $minha_assinatura = null;
+                            foreach ($assinaturas_atualizadas as $assinatura) {
+                                if ($assinatura['usuario_id'] == $usuario_id) {
+                                    $minha_assinatura = $assinatura;
+                                    break;
+                                }
+                            }
+                            
+                            if ($minha_assinatura) {
+                                // Gerar certificado PDF
+                                $pdf = $gerador_assinatura->gerarCertificadoAssinatura($documento, $minha_assinatura);
+                                
+                                // Salvar o certificado
+                                $nome_certificado = 'certificado_' . $documento_id . '_' . $usuario_id . '_' . time() . '.pdf';
+                                $caminho_certificado = 'uploads/certificados/' . $nome_certificado;
+                                
+                                // Criar pasta se não existir
+                                if (!is_dir('uploads/certificados/')) {
+                                    mkdir('uploads/certificados/', 0755, true);
+                                }
+                                
+                                $pdf->Output('F', $caminho_certificado);
+                                
+                                $certificado_url = $caminho_certificado;
+                                $msg = "SUCESSO! " . $resultado['message'] . "<br>";
+                                $msg .= "<strong>Assinatura:</strong> " . $resultado['assinatura_curta'] . "<br><br>";
+                                $msg .= "<div class='d-grid gap-2'>";
+                                $msg .= "<a href='{$caminho_certificado}' download class='btn btn-success'>";
+                                $msg .= "<i class='fas fa-download me-2'></i>Baixar Certificado de Assinatura</a>";
+                                $msg .= "</div>";
+                            } else {
+                                $msg = "SUCESSO! " . $resultado['message'] . " Assinatura: " . $resultado['assinatura_curta'];
+                            }
+                            
+                        } catch (Exception $e) {
+                            // Se der erro no certificado, ainda mostra sucesso na assinatura
+                            error_log("Erro ao gerar certificado: " . $e->getMessage());
+                            $msg = "SUCESSO! " . $resultado['message'] . " Assinatura: " . $resultado['assinatura_curta'];
+                            $msg .= "<br><small class='text-muted'>(Certificado não gerado: " . $e->getMessage() . ")</small>";
+                        }
+                    } else {
+                        $msg = "SUCESSO! " . $resultado['message'] . " Assinatura: " . $resultado['assinatura_curta'];
+                    }
                     $tipo_msg = 'success';
                     
                     // Atualizar dados
@@ -103,7 +158,7 @@ try {
                 <div class="card-body">
                     <?php if (!empty($msg)): ?>
                         <div class="alert alert-<?php echo $tipo_msg; ?>">
-                            <?php echo htmlspecialchars($msg); ?>
+                            <?php echo $msg; ?>
                         </div>
                     <?php endif; ?>
 
@@ -175,6 +230,15 @@ try {
                                 <i class="fas fa-<?php echo $verificacao['valida'] ? 'check' : 'times'; ?> me-2"></i>
                                 <?php echo $verificacao['message']; ?>
                             </div>
+
+                            <!-- Botão para baixar certificado se disponível -->
+                            <?php if (!empty($certificado_url)): ?>
+                                <div class="mt-3">
+                                    <a href="<?php echo $certificado_url; ?>" download class="btn btn-success">
+                                        <i class="fas fa-download me-2"></i>Baixar Certificado
+                                    </a>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     <?php else: ?>
                         <form method="POST">

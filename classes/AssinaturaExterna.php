@@ -1,17 +1,20 @@
 <?php
 require_once __DIR__ . '/Conexao.php';
 
-class AssinaturaExterna {
+class AssinaturaExterna
+{
     private $conn;
 
-    public function __construct() {
+    public function __construct()
+    {
         $this->conn = Conexao::getConexao();
     }
 
     /**
      * Adicionar signatário externo
      */
-    public function adicionarSignatario($documento_id, $nome, $email, $cpf) {
+    public function adicionarSignatario($documento_id, $nome, $email, $cpf)
+    {
         try {
             // Validar CPF
             if (!$this->validarCPF($cpf)) {
@@ -48,7 +51,6 @@ class AssinaturaExterna {
             }
 
             return ['success' => false, 'message' => 'Erro ao adicionar signatário'];
-
         } catch (Exception $e) {
             error_log("Erro ao adicionar signatário externo: " . $e->getMessage());
             return ['success' => false, 'message' => 'Erro interno do sistema'];
@@ -58,7 +60,8 @@ class AssinaturaExterna {
     /**
      * Processar assinatura externa
      */
-    public function processarAssinatura($token, $dados_assinante, $file_identificacao) {
+    public function processarAssinatura($token, $dados_assinante, $file_identificacao)
+    {
         try {
             // Buscar signatário
             $signatario = $this->buscarSignatarioPorToken($token);
@@ -106,7 +109,6 @@ class AssinaturaExterna {
             }
 
             return ['success' => false, 'message' => 'Erro ao registrar assinatura'];
-
         } catch (Exception $e) {
             error_log("Erro ao processar assinatura externa: " . $e->getMessage());
             return ['success' => false, 'message' => 'Erro interno do sistema'];
@@ -116,7 +118,8 @@ class AssinaturaExterna {
     /**
      * Buscar signatário por token - MÉTODO PÚBLICO PARA USO EXTERNO
      */
-    public function buscarSignatarioPorToken($token) {
+    public function buscarSignatarioPorToken($token)
+    {
         $sql = "SELECT se.*, d.titulo as documento_titulo, d.hash_documento 
                 FROM signatarios_externos se
                 JOIN documentos d ON se.documento_id = d.id
@@ -129,7 +132,8 @@ class AssinaturaExterna {
     /**
      * Gerar link do certificado - MÉTODO PÚBLICO
      */
-    public function gerarLinkCertificado($assinatura_id) {
+    public function gerarLinkCertificado($assinatura_id)
+    {
         $base_url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]";
         return $base_url . "/Assindocs/certificado_assinatura_externa.php?id=" . $assinatura_id;
     }
@@ -137,9 +141,10 @@ class AssinaturaExterna {
     /**
      * Validar CPF
      */
-    private function validarCPF($cpf) {
+    private function validarCPF($cpf)
+    {
         $cpf = preg_replace('/[^0-9]/', '', $cpf);
-        
+
         if (strlen($cpf) != 11 || preg_match('/(\d)\1{10}/', $cpf)) {
             return false;
         }
@@ -159,7 +164,8 @@ class AssinaturaExterna {
     /**
      * Verificar se signatário já existe
      */
-    private function signatarioExiste($documento_id, $email) {
+    private function signatarioExiste($documento_id, $email)
+    {
         $sql = "SELECT id FROM signatarios_externos 
                 WHERE documento_id = :doc_id AND email = :email";
         $stmt = $this->conn->prepare($sql);
@@ -173,7 +179,8 @@ class AssinaturaExterna {
     /**
      * Formatador de CPF
      */
-    private function formatarCPF($cpf) {
+    private function formatarCPF($cpf)
+    {
         $cpf = preg_replace('/[^0-9]/', '', $cpf);
         return substr($cpf, 0, 3) . '.' . substr($cpf, 3, 3) . '.' . substr($cpf, 6, 3) . '-' . substr($cpf, 9, 2);
     }
@@ -181,7 +188,8 @@ class AssinaturaExterna {
     /**
      * Gerar hash único da assinatura
      */
-    private function gerarHashAssinatura($signatario, $dados_assinante) {
+    private function gerarHashAssinatura($signatario, $dados_assinante)
+    {
         $dados_hash = [
             'documento_id' => $signatario['documento_id'],
             'signatario_id' => $signatario['id'],
@@ -199,7 +207,8 @@ class AssinaturaExterna {
     /**
      * Processar upload do documento de identificação
      */
-    private function processarDocumentoIdentificacao($file) {
+    private function processarDocumentoIdentificacao($file)
+    {
         if ($file['error'] !== UPLOAD_ERR_OK) {
             return ['success' => false, 'message' => 'Erro no upload do documento'];
         }
@@ -241,7 +250,8 @@ class AssinaturaExterna {
         return ['success' => false, 'message' => 'Falha ao salvar documento'];
     }
 
-    private function validarDadosAssinatura($signatario, $dados) {
+    private function validarDadosAssinatura($signatario, $dados)
+    {
         // Validar se CPF corresponde
         $cpf_limpo = preg_replace('/[^0-9]/', '', $signatario['cpf']);
         $cpf_fornecido = preg_replace('/[^0-9]/', '', $dados['cpf']);
@@ -264,7 +274,8 @@ class AssinaturaExterna {
         return ['success' => true];
     }
 
-    private function registrarAssinatura($signatario, $dados, $hash_assinatura, $caminho_identificacao) {
+    private function registrarAssinatura($signatario, $dados, $hash_assinatura, $caminho_identificacao)
+    {
         $sql = "INSERT INTO assinaturas_externas 
                 (signatario_externo_id, documento_id, nome_completo, cpf, hash_assinatura, 
                  ip_address, user_agent, dados_identificacao, carimbo_temporal) 
@@ -291,21 +302,74 @@ class AssinaturaExterna {
         return $result ? $this->conn->lastInsertId() : false;
     }
 
-    private function marcarComoAssinado($signatario_id) {
+    private function marcarComoAssinado($signatario_id)
+    {
         $sql = "UPDATE signatarios_externos SET assinado = 1, assinado_em = NOW() WHERE id = :id";
         $stmt = $this->conn->prepare($sql);
         return $stmt->execute([':id' => $signatario_id]);
     }
 
-    private function atualizarStatusDocumento($documento_id) {
+    private function atualizarStatusDocumento($documento_id)
+    {
         // Lógica para atualizar status do documento quando todos assinarem
         // Por enquanto, apenas um placeholder
         return true;
     }
 
-    private function gerarLinkAssinatura($token) {
+    private function gerarLinkAssinatura($token)
+    {
         $base_url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]";
         return $base_url . "/Assindocs/assinar_externo.php?token=" . $token;
     }
+
+    // AssinaturaExterna.php - ADICIONE ESTE MÉTODO
+
+    /**
+     * Processar assinatura para links compartilhados (MÉTODO PÚBLICO)
+     */
+    public function processarAssinaturaExterna($token, $dados_assinante, $file_identificacao = null)
+    {
+        try {
+            // Buscar signatário pelo token do link compartilhado
+            $sql = "SELECT lc.*, d.id as documento_id, d.titulo, d.hash_documento 
+                FROM links_compartilhamento lc
+                JOIN documentos d ON lc.documento_id = d.id
+                WHERE lc.token = :token AND lc.ativo = 1 AND lc.expira_em > NOW()";
+
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([':token' => $token]);
+            $link = $stmt->fetch();
+
+            if (!$link) {
+                return ['success' => false, 'message' => 'Link inválido ou expirado'];
+            }
+
+            // Verificar se o tipo de link permite assinatura
+            if (!in_array($link['tipo'], ['assinatura', 'download'])) {
+                return ['success' => false, 'message' => 'Este link não permite assinatura'];
+            }
+
+            // Adicionar como signatário externo
+            $resultado_signatario = $this->adicionarSignatario(
+                $link['documento_id'],
+                $dados_assinante['nome_completo'],
+                $dados_assinante['email'],
+                $dados_assinante['cpf']
+            );
+
+            if (!$resultado_signatario['success']) {
+                return $resultado_signatario;
+            }
+
+            // Processar a assinatura
+            return $this->processarAssinatura(
+                $resultado_signatario['token'],
+                $dados_assinante,
+                $file_identificacao
+            );
+        } catch (Exception $e) {
+            error_log("Erro ao processar assinatura externa: " . $e->getMessage());
+            return ['success' => false, 'message' => 'Erro interno do sistema'];
+        }
+    }
 }
-?>
